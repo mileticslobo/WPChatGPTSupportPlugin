@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: ChatGPT Support
- * Plugin URI:  https://tvoj-sajt.com
+ * Plugin URI:  https://plusinnovative.com
  * Description: Plugin za korisničku podršku pomoću ChatGPT-a.
  * Version:     1.0
- * Author:      Tvoje ime
- * Author URI:  https://tvoj-sajt.com
+ * Author:      Slobodan Miletic
+ * Author URI:  https://plusinnovative.com
  */
 
 if (!defined('ABSPATH')) {
@@ -47,7 +47,7 @@ function chatgpt_request_handler() {
     $url = "https://api.openai.com/v1/chat/completions";
 
     $data = array(
-        "model" => "gpt-3.5-turbo",  // Besplatna verzija ChatGPT modela
+        "model" => "gpt-3.5-turbo",  // Verzija ChatGPT modela
         "messages" => array(
             array("role" => "system", "content" => "Ti si korisnička podrška."),
             array("role" => "user", "content" => $message)
