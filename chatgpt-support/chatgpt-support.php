@@ -1,11 +1,11 @@
 <?php
 /**
  * Plugin Name: ChatGPT Support
- * Plugin URI:  https://tvoj-sajt.com
+ * Plugin URI:  https://plusinnovative.com
  * Description: Plugin za korisničku podršku pomoću ChatGPT-a.
  * Version:     1.0
- * Author:      Tvoje ime
- * Author URI:  https://tvoj-sajt.com
+ * Author:      Slobodan Miletic
+ * Author URI:  https://plusinnovative.com
  */
 
 if (!defined('ABSPATH')) {
