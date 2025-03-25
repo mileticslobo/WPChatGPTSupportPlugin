@@ -5,7 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
         <button id="chatgpt-toggle">💬 Chat</button>
         <div id="chatgpt-widget">
             <div id="chatgpt-header">
-                <span>ChatGPT Podrška</span>
+                <span>Podrška</span>
                 <button id="chatgpt-close">✖</button>
             </div>
             <div id="chatgpt-messages"></div>
