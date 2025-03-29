@@ -1,28 +1,28 @@
 <?php
 /**
- * Plugin Name: ChatGPT Support
+ * Plugin Name: WordPress ChatGPT Support Plugin
  * Plugin URI:  https://plusinnovative.com
- * Description: Plugin za korisničku podršku pomoću ChatGPT-a.
+ * Description: WordPress plugin for integrating OpenAI ChatGPT to provide automated chatbot support.
  * Version:     1.0
  * Author:      Slobodan Miletic
  * Author URI:  https://plusinnovative.com
  */
 
 if (!defined('ABSPATH')) {
-    exit; // Direktan pristup nije dozvoljen
+    exit; // Direct access is not allowed
 }
 
-// Dodavanje menija u admin panel
+// Adding a menu to the admin panel
 function chatgpt_support_menu() {
     add_options_page('ChatGPT Support', 'ChatGPT Support', 'manage_options', 'chatgpt-support', 'chatgpt_support_settings_page');
 }
 add_action('admin_menu', 'chatgpt_support_menu');
 
-// Stranica sa podešavanjima
+// Settings page
 function chatgpt_support_settings_page() {
     ?>
     <div class="wrap">
-        <h2>ChatGPT Support - Podešavanja</h2>
+        <h2>ChatGPT Support - Settings</h2>
         <form method="post" action="options.php">
             <?php
             settings_fields('chatgpt_support_options');
@@ -36,7 +36,7 @@ function chatgpt_support_settings_page() {
 
 function chatgpt_request_handler() {
     if (!isset($_POST['message']) || empty($_POST['message'])) {
-        wp_send_json_error('Greška: Nema poruke!');
+        wp_send_json_error('Error: No message!');
         return;
     }
 
@@ -44,7 +44,7 @@ function chatgpt_request_handler() {
     $api_key = chatgpt_decrypt_api_key(get_option('chatgpt_api_key'));
 
     if (empty($api_key)) {
-        wp_send_json_error('API ključ nije podešen. Molimo kontaktirajte administratora.');
+        wp_send_json_error('API key is not set. Please contact the administrator.');
         return;
     }
 
@@ -54,7 +54,7 @@ function chatgpt_request_handler() {
     $rate_limit = get_transient($rate_limit_key);
     
     if ($rate_limit && $rate_limit >= 10) {
-        wp_send_json_error('Previše zahteva. Molimo sačekajte nekoliko minuta.');
+        wp_send_json_error('Too many requests. Please wait a few minutes.');
         return;
     }
     
@@ -69,13 +69,13 @@ function chatgpt_request_handler() {
         return;
     }
 
-    // Poziv prema OpenAI API-u
+    // Call to OpenAI API
     $url = "https://api.openai.com/v1/chat/completions";
 
     $data = array(
-        "model" => "gpt-3.5-turbo",  // Verzija ChatGPT modela
+        "model" => "gpt-3.5-turbo",  // ChatGPT model version
         "messages" => array(
-            array("role" => "system", "content" => "Ti si korisnička podrška."),
+            array("role" => "system", "content" => "You are customer support."),
             array("role" => "user", "content" => $message)
         ),
         "temperature" => 0.7
@@ -94,7 +94,7 @@ function chatgpt_request_handler() {
 
     if (is_wp_error($response)) {
         error_log('ChatGPT API Error: ' . $response->get_error_message());
-        wp_send_json_error("Greška u komunikaciji sa OpenAI API-jem. Molimo pokušajte ponovo.");
+        wp_send_json_error("Error communicating with the OpenAI API. Please try again.");
         return;
     }
 
@@ -103,7 +103,7 @@ function chatgpt_request_handler() {
 
     if (!isset($result['choices'][0]['message']['content'])) {
         error_log('ChatGPT API Invalid Response: ' . $body);
-        wp_send_json_error("Greška: Neispravan odgovor API-ja.");
+        wp_send_json_error("Error: Invalid API response.");
         return;
     }
 
@@ -117,15 +117,15 @@ function chatgpt_request_handler() {
 add_action('wp_ajax_chatgpt_request', 'chatgpt_request_handler');
 add_action('wp_ajax_nopriv_chatgpt_request', 'chatgpt_request_handler');
 
-// Registracija opcija
+// Registering options
 function chatgpt_support_settings_init() {
     register_setting('chatgpt_support_options', 'chatgpt_api_key', array(
         'sanitize_callback' => 'chatgpt_encrypt_api_key'
     ));
 
-    add_settings_section('chatgpt_support_section', 'API Podešavanja', null, 'chatgpt-support');
+    add_settings_section('chatgpt_support_section', 'API Settings', null, 'chatgpt-support');
 
-    add_settings_field('chatgpt_api_key', 'OpenAI API ključ', 'chatgpt_api_key_callback', 'chatgpt-support', 'chatgpt_support_section');
+    add_settings_field('chatgpt_api_key', 'OpenAI API Key', 'chatgpt_api_key_callback', 'chatgpt-support', 'chatgpt_support_section');
 }
 add_action('admin_init', 'chatgpt_support_settings_init');
 
@@ -147,10 +147,10 @@ function chatgpt_api_key_callback() {
     $api_key = chatgpt_decrypt_api_key(get_option('chatgpt_api_key'));
     wp_nonce_field('chatgpt_api_key_nonce', 'chatgpt_api_key_nonce');
     echo '<input type="password" name="chatgpt_api_key" value="' . esc_attr($api_key) . '" class="regular-text" />';
-    echo '<p class="description">Unesite vaš OpenAI API ključ. Ostavite prazno da sačuvate trenutni ključ.</p>';
+    echo '<p class="description">Enter your OpenAI API key. Leave blank to keep the current key.</p>';
 }
 
-// Dodavanje CSS i JavaScript fajlova
+// Adding CSS and JavaScript files
 function chatgpt_enqueue_scripts() {
     wp_enqueue_script('chatgpt-widget', plugins_url('chatgpt-widget.js', __FILE__), array('jquery'), null, true);
 }
