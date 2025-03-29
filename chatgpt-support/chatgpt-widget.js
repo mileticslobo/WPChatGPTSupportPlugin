@@ -3,15 +3,15 @@ document.addEventListener("DOMContentLoaded", function () {
     chatContainer.id = "chatgpt-popup-container";
     chatContainer.innerHTML = `
         <button id="chatgpt-toggle">💬 Chat</button>
-        <div id="chatgpt-widget">
+        <div id="chatgpt-widget" style="display: none;"> <!-- Set display to none -->
             <div id="chatgpt-header">
-                <span>Podrška</span>
+                <span>Hello</span>
                 <button id="chatgpt-close">✖</button>
             </div>
             <div id="chatgpt-messages"></div>
             <div id="chatgpt-input-container">
-                <input type="text" id="chatgpt-input" placeholder="Postavite pitanje..." />
-                <button id="chatgpt-send">Pošaljite</button>
+                <input type="text" id="chatgpt-input" placeholder="Ask the question..." />
+                <button id="chatgpt-send">Send</button>
             </div>
             <div id="chatgpt-typing-indicator" style="display: none;">
                 <span></span>
@@ -30,17 +30,23 @@ document.addEventListener("DOMContentLoaded", function () {
     let chatMessages = document.getElementById("chatgpt-messages");
     let typingIndicator = document.getElementById("chatgpt-typing-indicator");
 
-    // Debounce function
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
+    // Load chat messages from localStorage
+    function loadMessages() {
+        const savedMessages = JSON.parse(localStorage.getItem("chatgpt-messages")) || [];
+        savedMessages.forEach(({ content, type }) => {
+            addMessage(content, type);
+        });
+    }
+
+    // Save chat messages to localStorage
+    function saveMessages() {
+        const messages = Array.from(chatMessages.children).map((messageDiv) => {
+            return {
+                content: messageDiv.textContent,
+                type: messageDiv.className.replace("-msg", "")
             };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
+        });
+        localStorage.setItem("chatgpt-messages", JSON.stringify(messages));
     }
 
     // Scroll to bottom of chat
@@ -67,6 +73,7 @@ document.addEventListener("DOMContentLoaded", function () {
         messageDiv.textContent = `${type === 'user' ? 'Korisnik' : 'Bot'}: ${content}`;
         chatMessages.appendChild(messageDiv);
         scrollToBottom();
+        saveMessages(); // Save messages after adding a new one
     }
 
     // Handle message sending
@@ -122,29 +129,35 @@ document.addEventListener("DOMContentLoaded", function () {
         chatWidget.style.display = "block";
         chatToggle.style.display = "none";
         chatInput.focus();
+
+        // Check if it's the first time opening the chat
+        if (!localStorage.getItem("chatgpt-welcome-shown")) {
+            addMessage("Dobrodošli! Kako vam mogu pomoći danas?", "bot"); // Welcome message
+            localStorage.setItem("chatgpt-welcome-shown", "true");
+        }
+
+        // Save state to localStorage
+        localStorage.setItem("chatgpt-widget-opened", "true");
     });
 
     chatClose.addEventListener("click", function () {
         chatWidget.style.display = "none";
         chatToggle.style.display = "block";
+
+        // Save state to localStorage
+        localStorage.setItem("chatgpt-widget-opened", "false");
     });
 
     chatSend.addEventListener("click", handleSendMessage);
-    
+
     // Handle Enter key
-    chatInput.addEventListener("keypress", function(e) {
+    chatInput.addEventListener("keypress", function (e) {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
         }
     });
 
-    // Debounced input handler for future features
-    const debouncedInputHandler = debounce((value) => {
-        // Add future input handling features here
-    }, 300);
-
-    chatInput.addEventListener("input", (e) => {
-        debouncedInputHandler(e.target.value);
-    });
+    // Load messages on page load
+    loadMessages();
 });
