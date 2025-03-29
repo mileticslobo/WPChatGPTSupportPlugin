@@ -53,8 +53,8 @@ function chatgpt_request_handler() {
     $rate_limit_key = 'chatgpt_rate_limit_' . $user_ip;
     $rate_limit = get_transient($rate_limit_key);
 
-    // Configurable rate limit
-    $rate_limit_threshold = apply_filters('chatgpt_rate_limit_threshold', 10);
+    // Use rate limit threshold from settings
+    $rate_limit_threshold = get_option('chatgpt_rate_limit_threshold', 10);
 
     if ($rate_limit && $rate_limit >= $rate_limit_threshold) {
         wp_send_json_error('Too many requests. Please wait a few minutes.');
@@ -68,7 +68,8 @@ function chatgpt_request_handler() {
     $user_message_count_key = 'chatgpt_message_count_' . $user_id;
     $user_message_count = get_option($user_message_count_key, 0);
 
-    $user_message_limit = apply_filters('chatgpt_user_message_limit', 10);
+    // Use user-specific message limit from settings
+    $user_message_limit = get_option('chatgpt_user_message_limit', 10);
 
     if ($user_message_count >= $user_message_limit) {
         wp_send_json_error('You have reached the maximum number of messages allowed.');
@@ -90,13 +91,16 @@ function chatgpt_request_handler() {
     // Call to OpenAI API
     $url = "https://api.openai.com/v1/chat/completions";
 
+    // Use ChatGPT temperature from settings
+    $temperature = get_option('chatgpt_temperature', 0.7);
+
     $data = array(
         "model" => "gpt-3.5-turbo",  // ChatGPT model version
         "messages" => array(
             array("role" => "system", "content" => "You are customer support."),
             array("role" => "user", "content" => $message)
         ),
-        "temperature" => 0.7
+        "temperature" => $temperature
     );
 
     $args = array(
@@ -137,13 +141,32 @@ add_action('wp_ajax_nopriv_chatgpt_request', 'chatgpt_request_handler');
 
 // Registering options
 function chatgpt_support_settings_init() {
+    // Register API key
     register_setting('chatgpt_support_options', 'chatgpt_api_key', array(
         'sanitize_callback' => 'chatgpt_encrypt_api_key'
+    ));
+
+    // Register user-specific message limit
+    register_setting('chatgpt_support_options', 'chatgpt_user_message_limit', array(
+        'sanitize_callback' => 'absint'
+    ));
+
+    // Register rate limit threshold
+    register_setting('chatgpt_support_options', 'chatgpt_rate_limit_threshold', array(
+        'sanitize_callback' => 'absint'
+    ));
+
+    // Register ChatGPT temperature
+    register_setting('chatgpt_support_options', 'chatgpt_temperature', array(
+        'sanitize_callback' => 'floatval'
     ));
 
     add_settings_section('chatgpt_support_section', 'API Settings', null, 'chatgpt-support');
 
     add_settings_field('chatgpt_api_key', 'OpenAI API Key', 'chatgpt_api_key_callback', 'chatgpt-support', 'chatgpt_support_section');
+    add_settings_field('chatgpt_user_message_limit', 'User Message Limit', 'chatgpt_user_message_limit_callback', 'chatgpt-support', 'chatgpt_support_section');
+    add_settings_field('chatgpt_rate_limit_threshold', 'Rate Limit Threshold', 'chatgpt_rate_limit_threshold_callback', 'chatgpt-support', 'chatgpt_support_section');
+    add_settings_field('chatgpt_temperature', 'ChatGPT Temperature', 'chatgpt_temperature_callback', 'chatgpt-support', 'chatgpt_support_section');
 }
 add_action('admin_init', 'chatgpt_support_settings_init');
 
@@ -166,6 +189,24 @@ function chatgpt_api_key_callback() {
     wp_nonce_field('chatgpt_api_key_nonce', 'chatgpt_api_key_nonce');
     echo '<input type="password" name="chatgpt_api_key" value="' . esc_attr($api_key) . '" class="regular-text" />';
     echo '<p class="description">Enter your OpenAI API key. Leave blank to keep the current key.</p>';
+}
+
+function chatgpt_user_message_limit_callback() {
+    $limit = get_option('chatgpt_user_message_limit', 10);
+    echo '<input type="number" name="chatgpt_user_message_limit" value="' . esc_attr($limit) . '" class="regular-text" />';
+    echo '<p class="description">Set the maximum number of messages a user can send.</p>';
+}
+
+function chatgpt_rate_limit_threshold_callback() {
+    $threshold = get_option('chatgpt_rate_limit_threshold', 10);
+    echo '<input type="number" name="chatgpt_rate_limit_threshold" value="' . esc_attr($threshold) . '" class="regular-text" />';
+    echo '<p class="description">Set the maximum number of requests allowed per minute per IP.</p>';
+}
+
+function chatgpt_temperature_callback() {
+    $temperature = get_option('chatgpt_temperature', 0.7);
+    echo '<input type="number" step="0.1" min="0" max="1" name="chatgpt_temperature" value="' . esc_attr($temperature) . '" class="regular-text" />';
+    echo '<p class="description">Set the ChatGPT temperature (0.0 to 1.0). Lower values make responses more focused.</p>';
 }
 
 // Adding CSS and JavaScript files
