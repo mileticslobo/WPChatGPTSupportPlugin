@@ -9,8 +9,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 <button id="chatgpt-close">✖</button>
             </div>
             <div id="chatgpt-messages"></div>
-            <input type="text" id="chatgpt-input" placeholder="Postavite pitanje..." />
-            <button id="chatgpt-send">Pošaljite</button>
+            <div id="chatgpt-input-container">
+                <input type="text" id="chatgpt-input" placeholder="Postavite pitanje..." />
+                <button id="chatgpt-send">Pošaljite</button>
+            </div>
+            <div id="chatgpt-typing-indicator" style="display: none;">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
         </div>
     `;
     document.body.appendChild(chatContainer);
@@ -18,11 +25,103 @@ document.addEventListener("DOMContentLoaded", function () {
     let chatWidget = document.getElementById("chatgpt-widget");
     let chatToggle = document.getElementById("chatgpt-toggle");
     let chatClose = document.getElementById("chatgpt-close");
+    let chatInput = document.getElementById("chatgpt-input");
+    let chatSend = document.getElementById("chatgpt-send");
+    let chatMessages = document.getElementById("chatgpt-messages");
+    let typingIndicator = document.getElementById("chatgpt-typing-indicator");
 
-    // Prikaz/sakrivanje chata
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Scroll to bottom of chat
+    function scrollToBottom() {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // Show typing indicator
+    function showTypingIndicator() {
+        typingIndicator.style.display = "flex";
+        scrollToBottom();
+    }
+
+    // Hide typing indicator
+    function hideTypingIndicator() {
+        typingIndicator.style.display = "none";
+        scrollToBottom();
+    }
+
+    // Add message to chat
+    function addMessage(content, type) {
+        const messageDiv = document.createElement("div");
+        messageDiv.className = `${type}-msg`;
+        messageDiv.textContent = `${type === 'user' ? 'Korisnik' : 'Bot'}: ${content}`;
+        chatMessages.appendChild(messageDiv);
+        scrollToBottom();
+    }
+
+    // Handle message sending
+    async function handleSendMessage() {
+        const input = chatInput.value.trim();
+        if (!input) return;
+
+        // Disable input and send button while processing
+        chatInput.disabled = true;
+        chatSend.disabled = true;
+
+        // Add user message
+        addMessage(input, 'user');
+        chatInput.value = "";
+
+        // Show typing indicator
+        showTypingIndicator();
+
+        try {
+            const formData = new FormData();
+            formData.append('action', 'chatgpt_request');
+            formData.append('message', input);
+
+            const response = await fetch("/wp-admin/admin-ajax.php", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            // Hide typing indicator
+            hideTypingIndicator();
+
+            if (data.success) {
+                addMessage(data.data, 'bot');
+            } else {
+                addMessage(data.data || 'Nepoznata greška sa servera.', 'error');
+            }
+        } catch (error) {
+            console.error("Fetch error:", error);
+            hideTypingIndicator();
+            addMessage('Greška: Nije moguće kontaktirati server.', 'error');
+        } finally {
+            // Re-enable input and send button
+            chatInput.disabled = false;
+            chatSend.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    // Event listeners
     chatToggle.addEventListener("click", function () {
         chatWidget.style.display = "block";
         chatToggle.style.display = "none";
+        chatInput.focus();
     });
 
     chatClose.addEventListener("click", function () {
@@ -30,40 +129,22 @@ document.addEventListener("DOMContentLoaded", function () {
         chatToggle.style.display = "block";
     });
 
-    document.getElementById("chatgpt-send").addEventListener("click", function () {
-        let input = document.getElementById("chatgpt-input").value.trim();
-        let chatBox = document.getElementById("chatgpt-messages");
+    chatSend.addEventListener("click", handleSendMessage);
+    
+    // Handle Enter key
+    chatInput.addEventListener("keypress", function(e) {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSendMessage();
+        }
+    });
 
-        if (!input) return; // Ne dozvoljava slanje praznih poruka
+    // Debounced input handler for future features
+    const debouncedInputHandler = debounce((value) => {
+        // Add future input handling features here
+    }, 300);
 
-        chatBox.innerHTML += `<div class="user-msg">Korisnik: ${input}</div>`;
-        document.getElementById("chatgpt-input").value = "";
-
-        // Korišćenje FormData umesto application/x-www-form-urlencoded
-        let formData = new FormData();
-        formData.append('action', 'chatgpt_request');
-        formData.append('message', input);
-
-        // Dodavanje loga da proverimo šta se šalje
-        console.log("Sending FormData:", formData);
-
-        fetch("/wp-admin/admin-ajax.php", {
-            method: "POST",
-            body: formData
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log("Server Response:", data); // Dijagnostika odgovora
-
-            if (data.success) {
-                chatBox.innerHTML += `<div class="bot-msg">Bot: ${data.data}</div>`;
-            } else {
-                chatBox.innerHTML += `<div class="error-msg">Greška: ${data.data || 'Nepoznata greška sa servera.'}</div>`;
-            }
-        })
-        .catch(error => {
-            console.error("Fetch error:", error);
-            chatBox.innerHTML += `<div class="error-msg">Greška: Nije moguće kontaktirati server.</div>`;
-        });
+    chatInput.addEventListener("input", (e) => {
+        debouncedInputHandler(e.target.value);
     });
 });
