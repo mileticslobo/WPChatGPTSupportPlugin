@@ -34,8 +34,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function loadMessages() {
         const savedMessages = JSON.parse(localStorage.getItem("chatgpt-messages")) || [];
         savedMessages.forEach(({ content, type }) => {
-            addMessage(content, type);
+            const messageDiv = document.createElement("div");
+            messageDiv.className = `${type}-msg`;
+            messageDiv.textContent = content; // Ostaviti originalni sadržaj bez dodavanja prefiksa
+            chatMessages.appendChild(messageDiv);
         });
+        scrollToBottom();
     }
 
     // Save chat messages to localStorage
@@ -51,7 +55,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Scroll to bottom of chat
     function scrollToBottom() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        const chatMessages = document.getElementById("chatgpt-messages");
+        if (chatMessages) {
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
     }
 
     // Show typing indicator
@@ -70,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function addMessage(content, type) {
         const messageDiv = document.createElement("div");
         messageDiv.className = `${type}-msg`;
-        messageDiv.textContent = `${type === 'user' ? 'Korisnik' : 'Bot'}: ${content}`;
+        messageDiv.textContent = `${type === 'user' ? 'Me' : 'Assistant'}: ${content}`;
         chatMessages.appendChild(messageDiv);
         scrollToBottom();
         saveMessages(); // Save messages after adding a new one
@@ -132,15 +139,23 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // Check if chat was previously opened
+    if (localStorage.getItem("chatgpt-widget-opened") === "true") {
+        chatWidget.style.display = "block";
+        chatToggle.style.display = "none";
+        loadMessages(); // Load messages if chat is open
+    }
+
     // Event listeners
     chatToggle.addEventListener("click", function () {
         chatWidget.style.display = "block";
         chatToggle.style.display = "none";
         chatInput.focus();
+        setTimeout(scrollToBottom, 100); // Ensures scrolling after rendering
 
         // Check if it's the first time opening the chat
         if (!localStorage.getItem("chatgpt-welcome-shown")) {
-            addMessage("Dobrodošli! Kako vam mogu pomoći danas?", "bot"); // Welcome message
+            addMessage("Welcome! How can I assist you today?", "bot"); // Welcome message
             localStorage.setItem("chatgpt-welcome-shown", "true");
         }
 
@@ -168,4 +183,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Load messages on page load
     loadMessages();
+    scrollToBottom();  // Ensure we scroll to the bottom when the page refreshes or the chat opens.
+
+    function observeChatChanges() {
+        const messagesContainer = document.getElementById("chatgpt-messages");
+        if (!messagesContainer) return;
+
+        const observer = new MutationObserver(() => {
+            scrollToBottom();
+        });
+
+        observer.observe(messagesContainer, { childList: true });
+    }
+
+    observeChatChanges();
 });
