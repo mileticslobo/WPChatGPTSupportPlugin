@@ -23,6 +23,11 @@
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
+#chatgpt-toggle:focus {
+    outline: 2px solid #0056b3;
+    outline-offset: 2px;
+}
+
 #chatgpt-widget {
     display: none;
     position: fixed;
@@ -124,7 +129,8 @@
 }
 
 #chatgpt-input:focus {
-    border-color: #007bff;
+    border-color: #0056b3;
+    box-shadow: 0 0 5px rgba(0, 91, 179, 0.5);
 }
 
 #chatgpt-input:disabled {

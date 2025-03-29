@@ -52,13 +52,31 @@ function chatgpt_request_handler() {
     $user_ip = $_SERVER['REMOTE_ADDR'];
     $rate_limit_key = 'chatgpt_rate_limit_' . $user_ip;
     $rate_limit = get_transient($rate_limit_key);
-    
-    if ($rate_limit && $rate_limit >= 10) {
+
+    // Configurable rate limit
+    $rate_limit_threshold = apply_filters('chatgpt_rate_limit_threshold', 10);
+
+    if ($rate_limit && $rate_limit >= $rate_limit_threshold) {
         wp_send_json_error('Too many requests. Please wait a few minutes.');
         return;
     }
-    
+
     set_transient($rate_limit_key, ($rate_limit ? $rate_limit + 1 : 1), 60);
+
+    // User-specific message limit
+    $user_id = get_current_user_id();
+    $user_message_count_key = 'chatgpt_message_count_' . $user_id;
+    $user_message_count = get_option($user_message_count_key, 0);
+
+    $user_message_limit = apply_filters('chatgpt_user_message_limit', 10);
+
+    if ($user_message_count >= $user_message_limit) {
+        wp_send_json_error('You have reached the maximum number of messages allowed.');
+        return;
+    }
+
+    // Increment the user's message count
+    update_option($user_message_count_key, $user_message_count + 1);
 
     // Cache check
     $cache_key = 'chatgpt_response_' . md5($message);

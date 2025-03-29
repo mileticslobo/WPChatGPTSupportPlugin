@@ -76,6 +76,23 @@ document.addEventListener("DOMContentLoaded", function () {
         saveMessages(); // Save messages after adding a new one
     }
 
+    async function sendChatRequest(input) {
+        const formData = new FormData();
+        formData.append('action', 'chatgpt_request');
+        formData.append('message', input);
+
+        const response = await fetch("/wp-admin/admin-ajax.php", {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Server error: Unable to process the request.');
+        }
+
+        return response.json();
+    }
+
     // Handle message sending
     async function handleSendMessage() {
         const input = chatInput.value.trim();
@@ -93,16 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
         showTypingIndicator();
 
         try {
-            const formData = new FormData();
-            formData.append('action', 'chatgpt_request');
-            formData.append('message', input);
-
-            const response = await fetch("/wp-admin/admin-ajax.php", {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
+            const data = await sendChatRequest(input);
 
             // Hide typing indicator
             hideTypingIndicator();
@@ -110,12 +118,12 @@ document.addEventListener("DOMContentLoaded", function () {
             if (data.success) {
                 addMessage(data.data, 'bot');
             } else {
-                addMessage(data.data || 'Nepoznata greška sa servera.', 'error');
+                addMessage(data.data || 'Unknown server error.', 'error');
             }
         } catch (error) {
             console.error("Fetch error:", error);
             hideTypingIndicator();
-            addMessage('Greška: Nije moguće kontaktirati server.', 'error');
+            addMessage('Error: Unable to contact the server.', 'error');
         } finally {
             // Re-enable input and send button
             chatInput.disabled = false;

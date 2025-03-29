@@ -7,13 +7,13 @@ function chatgpt_get_response($message) {
     $api_key = get_option('chatgpt_api_key');
 
     if (!$api_key) {
-        return 'API key is not set!';
+        return 'Error: API key is not set. Please configure it in the settings.';
     }
 
     $url = 'https://api.openai.com/v1/chat/completions';
 
     $data = array(
-        'model' => 'gpt-4',
+        'model' => 'gpt-3.5-turbo', // Ensure consistency with other files
         'messages' => array(
             array('role' => 'system', 'content' => 'You are customer support.'),
             array('role' => 'user', 'content' => $message)
@@ -33,13 +33,19 @@ function chatgpt_get_response($message) {
     $response = wp_remote_post($url, $args);
 
     if (is_wp_error($response)) {
-        return 'Error communicating with the API!';
+        error_log('ChatGPT API Error: ' . $response->get_error_message());
+        return 'Error: Unable to communicate with the API. Please try again later.';
     }
 
     $body = wp_remote_retrieve_body($response);
     $result = json_decode($body, true);
 
-    return $result['choices'][0]['message']['content'] ?? 'No response!';
+    if (!isset($result['choices'][0]['message']['content'])) {
+        error_log('ChatGPT API Invalid Response: ' . $body);
+        return 'Error: Invalid response from the API.';
+    }
+
+    return $result['choices'][0]['message']['content'];
 }
 
 // AJAX handler
